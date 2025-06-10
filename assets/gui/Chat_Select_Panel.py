@@ -80,6 +80,7 @@ class ChatSelectPanel(QWidget):
             os.mkdir(name)
             layout = self.scrollArea.widget().layout()
             layout.insertWidget(layout.count() - 1, ChatIcon(name, self))
+            self.parent.currentChat = name
         os.chdir(os.path.dirname(__file__)[:-4])
 
 
