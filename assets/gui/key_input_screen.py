@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLineEdit
 )
 
+#Class to represent the dialog box used to get the Groq API key.
 class KeyInputScreen(QDialog):
     def __init__(self):
         super().__init__()
