@@ -5,7 +5,8 @@ from PySide6.QtGui import QColor, QPalette, QFont
 from PySide6.QtWidgets import (
     QWidget, 
     QVBoxLayout, 
-    QHBoxLayout,  
+    QHBoxLayout, 
+    QLabel, 
     QLineEdit, 
     QPushButton,
     QScrollArea,
@@ -27,6 +28,12 @@ class ChatPanel(QWidget):
         palette.setColor(QPalette.ColorRole.Window, QColor(245, 245, 245))
         self.setPalette(palette)
 
+        self.header = chatHeaderArea(parent.currentChat)
+        self.setAutoFillBackground(True)
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(245, 245, 245))
+        self.setPalette(palette)
+
         self.displayArea = ChatDisplayArea()
         self.scrollArea = QScrollArea()
         self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -36,18 +43,28 @@ class ChatPanel(QWidget):
         self.scrollArea.setWidget(self.displayArea)
 
         self.mainlayout = QVBoxLayout()
-        self.mainlayout.addWidget(self.scrollArea, stretch = 1)
+        self.mainlayout.addWidget(self.header, stretch = 1)
+        self.mainlayout.addWidget(self.scrollArea, stretch = 5)
         self.mainlayout.addWidget(ChatInputArea(self))
 
         self.setLayout(self.mainlayout)
 
     def loadChat(self, chatName):
         print("Loading " + chatName)
+
+        #Insert a new header panel to reflect the new chat
+        self.layout().removeWidget(self.header)
+        self.header.setParent(None)
+        newHeader = chatHeaderArea(chatName)
+        self.layout().insertWidget(0, newHeader)
+        self.header = newHeader
+
+        #Show the new chat itself by replacing the chat display area
         newDisplay = ChatDisplayArea(chatName)
         self.layout().removeWidget(self.scrollArea)
         self.displayArea.setParent(None)
         self.scrollArea.setWidget(newDisplay)
-        self.layout().insertWidget(0, self.scrollArea)
+        self.layout().insertWidget(1, self.scrollArea)
         self.displayArea = newDisplay
 
     #Receives a message from the input panel, sends it to the
@@ -77,11 +94,11 @@ class ChatPanel(QWidget):
         os.chdir(os.path.dirname(__file__)[:-4] + "/chats/" + self.parent.currentChat)
         
         try:
-            outFile = open(str(self.displayArea.msgNum + 1) + ".txt", "w")
+            outFile = open(str(self.displayArea.msgNum + 1) + ".txt", encoding = "utf-16", mode = "w")
             outFile.write(userMessage)
             outFile.close()
 
-            outFile = open(str(self.displayArea.msgNum + 2) + ".txt", "w")
+            outFile = open(str(self.displayArea.msgNum + 2) + ".txt", encoding = "utf-16", mode = "w")
             outFile.write(response)
             outFile.close()
         except Exception as e:
@@ -89,6 +106,21 @@ class ChatPanel(QWidget):
         os.chdir(os.path.dirname(__file__))
 
         self.displayArea.msgNum += 2
+
+class chatHeaderArea(QWidget):
+    def __init__(self, chatName):
+        super().__init__()
+        layout = QHBoxLayout()
+
+        self.title = QLabel(chatName)
+        self.title.setStyleSheet("color: #000000;")
+        layout.addWidget(self.title)
+
+        button = QPushButton("...")
+        layout.addWidget(button)
+
+        
+        self.setLayout(layout)
 
 #This class represents the area where the messages in the chat are displayed. This is the
 #middle section of the MainScreen. 
@@ -112,7 +144,7 @@ class ChatDisplayArea(QWidget):
             for msg in messages:
                 try:
                     print("Reading " + msg + " in " + chatName)
-                    outFile = open(msg)
+                    outFile = open(msg, encoding = "utf-16", mode = "r")
                     content = outFile.read()
                     
                     self.displayMessage(content)

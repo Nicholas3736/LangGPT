@@ -1,7 +1,7 @@
 import os
 import random
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QPalette, QAction, QCursor, QFont
+from PySide6.QtGui import QColor, QPalette, QAction, QCursor
 from PySide6.QtWidgets import (
     QWidget, 
     QVBoxLayout, 
