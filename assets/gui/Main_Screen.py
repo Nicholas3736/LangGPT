@@ -21,7 +21,7 @@ def colorRandom(w):
     palette.setColor(QPalette.ColorRole.Window, QColor(red, green, blue))
     w.setPalette(palette)
 
-#This class represents the entire screen that the user sees while chattin
+#This class represents the entire screen that the user sees while chatting
 class MainScreen(QWidget):
     def __init__(self):
         super().__init__()
@@ -32,8 +32,8 @@ class MainScreen(QWidget):
         keyInput = KeyInputScreen()
         keyInput.exec()
 
-        self.chatPanel = ChatPanel(self, keyInput.getInput())
-        chatSelectPanel = ChatSelectPanel(self)
+        self.chatPanel = ChatPanel(keyInput.getInput())
+        chatSelectPanel = ChatSelectPanel()
 
         layout = QHBoxLayout()
         layout.addWidget(chatSelectPanel, stretch = 4)

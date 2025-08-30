@@ -1,5 +1,6 @@
 from groq import Groq, APIConnectionError
 import math
+import os
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPalette, QFont
 from PySide6.QtWidgets import (
@@ -12,14 +13,14 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QTextEdit
 )
-import os
+import sqlite3
 
 
 #The panel where the chatting takes place. This is also where the API is run.
 class ChatPanel(QWidget):
-    def __init__(self, parent, apiKey):
+    def __init__(self, apiKey):
         super().__init__()
-        self.parent = parent
+        self.language = ""
         self.APIConnection = Groq(api_key = apiKey)
         print("API key: " + apiKey)
 
@@ -28,7 +29,7 @@ class ChatPanel(QWidget):
         palette.setColor(QPalette.ColorRole.Window, QColor(245, 245, 245))
         self.setPalette(palette)
 
-        self.header = chatHeaderArea(parent.currentChat)
+        self.header = chatHeaderArea("")
         self.setAutoFillBackground(True)
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Window, QColor(245, 245, 245))
@@ -67,6 +68,17 @@ class ChatPanel(QWidget):
         self.layout().insertWidget(1, self.scrollArea)
         self.displayArea = newDisplay
 
+        try:
+            os.chdir(os.path.dirname(__file__)[:-4])
+            conn = sqlite3.connect("SettingsDB.db")
+            cursor = conn.cursor()
+
+            settings = cursor.execute("SELECT * FROM ChatSettings WHERE name = ?", (chatName,))
+            settings = settings.fetchone()
+            self.language = settings[0][1]
+        except sqlite3.Error as e:
+            print(e)
+
     #Receives a message from the input panel, sends it to the
     #Groq API, and displays both the user message and response.
     #Also saves the user's and the AI's messages.
@@ -77,6 +89,10 @@ class ChatPanel(QWidget):
         try:
             chat_completion = self.APIConnection.chat.completions.create(
                 messages=[
+                    {
+                        "role": "system",
+                        "content": "You must give your answer in " + self.language
+                    },
                     {
                         "role": "user",
                         "content": msg,
@@ -91,7 +107,7 @@ class ChatPanel(QWidget):
         self.displayArea.displayMessage(response)
 
         #record the messages in the message log
-        os.chdir(os.path.dirname(__file__)[:-4] + "/chats/" + self.parent.currentChat)
+        os.chdir(os.path.dirname(__file__)[:-4] + "/chats/" + self.parent().currentChat)
         
         try:
             outFile = open(str(self.displayArea.msgNum + 1) + ".txt", encoding = "utf-16", mode = "w")

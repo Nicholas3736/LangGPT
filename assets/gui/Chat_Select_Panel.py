@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QSizePolicy
 )
 import shutil
+import sqlite3
 
 
 #Temporary function to color whatever widget is passed in a random color.
@@ -31,9 +32,9 @@ def colorRandom(w):
 #The panel to the left on the MainScreen, where the user
 #can select and swtich between chats.
 class ChatSelectPanel(QWidget):
-    def __init__(self, parent):
+    def __init__(self):
         super().__init__()
-        self.parent = parent
+        
         self.currentChat = None
         layout = QVBoxLayout()
 
@@ -50,7 +51,7 @@ class ChatSelectPanel(QWidget):
         lowerPanel = QVBoxLayout()
 
         for chat in chats:
-            lowerPanel.addWidget(ChatIcon(chat, self))
+            lowerPanel.addWidget(ChatIcon(chat))
         os.chdir(os.path.dirname(__file__)[:-4])
 
         lowerPanel.addStretch()
@@ -81,17 +82,29 @@ class ChatSelectPanel(QWidget):
         if ok:
             os.mkdir(name)
             layout = self.scrollArea.widget().layout()
-            layout.insertWidget(layout.count() - 1, ChatIcon(name, self))
-            self.parent.currentChat = name
+            layout.insertWidget(layout.count() - 1, ChatIcon(name))
+            self.parent().currentChat = name
+
+            os.chdir(os.path.dirname(__file__)[:-4])
+
+            try:
+                conn = sqlite3.connect("SettingsDB.db")
+                cursor = conn.cursor()
+                
+                cursor.execute("INSERT into ChatSettings \
+                               (name, language) VALUES (?, ?)", (name, "English"))
+                conn.commit()
+                conn.close()
+            except sqlite3.Error as e:
+                print(e)
         os.chdir(os.path.dirname(__file__)[:-4])
 
 
 #This class represents an icon for an individual chat that the user can
 #select on the left hand side.
 class ChatIcon(QWidget):
-    def __init__(self, name, parent):
+    def __init__(self, name):
         super().__init__()
-        self.parent = parent
         layout = QHBoxLayout()
 
         self.link = ClickableText(name)
@@ -112,7 +125,11 @@ class ChatIcon(QWidget):
         self.setLayout(layout)
 
     def selected(self):
-        self.parent.parent.setChat(self.link.text())
+        mainScreen = self.parent()
+
+        while mainScreen.__class__.__name__ != "MainScreen":
+            mainScreen = mainScreen.parent()
+        mainScreen.setChat(self.link.text())
 
     #Shows the options menu when the button is clicked
     def showMenu(self):
@@ -127,30 +144,60 @@ class ChatIcon(QWidget):
         menu.addAction(deleteAction)
 
         settingsAction = QAction("Chat settings")
+        settingsAction.triggered.connect(self.displaySettings)
         menu.addAction(settingsAction)
 
         menu.exec(QCursor.pos())
 
+    def displaySettings(self):
+        self.parent().parent().parent().parent().parent().parent().parent().displaySettings(self.link.text())
+
     def renameChat(self):
         os.chdir(os.path.dirname(__file__)[:-4] + "/chats")
-        name, ok = QInputDialog.getText(self, "New Chat",
+        newName, ok = QInputDialog.getText(self, "New Chat",
                                     "Enter the new name of the chat:", QLineEdit.Normal)
         chats = os.listdir()
 
-        while ok and (name.strip() == "" or name in chats):
-            name, ok = QInputDialog.getText(self, "New Chat",
+        while ok and (newName.strip() == "" or newName in chats):
+            newName, ok = QInputDialog.getText(self, "New Chat",
                                     "Invalid name\n\nEnter the new name of " \
                                     "the chat:", QLineEdit.Normal)
         
         if ok:
-            os.rename(os.getcwd() + "/" + self.link.text(), os.getcwd() + "/" + name)
-            self.link.setText(name)
+            oldName = self.link.text()
+            os.rename(os.getcwd() + "/" + oldName, os.getcwd() + "/" + newName)
+            self.link.setText(newName)
+
+            os.chdir(os.path.dirname(__file__)[:-4])
+
+            try:
+                conn = sqlite3.connect("SettingsDB.db")
+                cursor = conn.cursor()
+                
+                cursor.execute("UPDATE ChatSettings SET name = ? where name = ?", (newName, oldName))
+                conn.commit()
+                conn.close()
+            except sqlite3.Error as e:
+                print(e)
 
     def deleteChat(self):
+        chatName = self.link.text()
         os.chdir(os.path.dirname(__file__)[:-4] + "/chats")
-        shutil.rmtree(os.getcwd() + "/" + self.link.text())
-        self.parent.layout().removeWidget(self)
+        shutil.rmtree(os.getcwd() + "/" + chatName)
+        self.parent().layout().removeWidget(self)
         self.deleteLater()
+
+        os.chdir(os.path.dirname(__file__)[:-4])
+
+        try:
+            conn = sqlite3.connect("SettingsDB.db")
+            cursor = conn.cursor()
+            
+            cursor.execute("DELETE from ChatSettings where name = ?", (chatName,))
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            print(e)
 
 
 
