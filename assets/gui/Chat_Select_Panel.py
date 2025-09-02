@@ -92,7 +92,7 @@ class ChatSelectPanel(QWidget):
                 cursor = conn.cursor()
                 
                 cursor.execute("INSERT into ChatSettings \
-                               (name, language) VALUES (?, ?)", (name, "English"))
+                               (name, language, response_length) VALUES (?, ?, ?)", (name, "English", "medium"))
                 conn.commit()
                 conn.close()
             except sqlite3.Error as e:

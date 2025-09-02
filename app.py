@@ -34,6 +34,7 @@ class App(QMainWindow):
 
         #retrieve the settings for the chat to display them on the settings screen
         languageSetting = ""
+        responseLengthSetting = ""
         
         try:
             os.chdir(os.path.dirname(__file__) + "/assets")
@@ -44,12 +45,21 @@ class App(QMainWindow):
             settings = settings.fetchall()
 
             languageSetting = settings[0][1]
+            responseLengthSetting = settings[0][2]
             print(settings)
         except sqlite3.Error as e:
             print(e)
 
-        self.settingsScreen.languageBox.setCurrentText(languageSetting)
         self.settingsScreen.chatName = chatName
+        self.settingsScreen.languageBox.setCurrentText(languageSetting)
+        
+        if responseLengthSetting == "short":
+            self.settingsScreen.responseLengthButtonGroup.button(1).setChecked(True)
+        elif responseLengthSetting == "medium":
+            self.settingsScreen.responseLengthButtonGroup.button(2).setChecked(True)
+        else:
+            self.settingsScreen.responseLengthButtonGroup.button(3).setChecked(True) 
+
         self.stackLayout.setCurrentIndex(1)
 
     def displayMainScreen(self):

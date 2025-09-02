@@ -2,10 +2,12 @@
 
 import os
 from PySide6.QtWidgets import(
+    QButtonGroup,
     QComboBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QRadioButton,
     QVBoxLayout,
     QWidget,
 )
@@ -42,6 +44,25 @@ class SettingsScreen(QWidget):
         self.languageBox.addItems(supportedLanguages)
         layout.addWidget(self.languageBox)
 
+        #Options for setting the length of the AI's responses
+        layout.addWidget(QLabel("Reponse Length"))
+        self.responseLengthButtonGroup = QButtonGroup()
+        responseLengthLayout = QVBoxLayout()
+        
+        shortResponseButton = QRadioButton("Short")
+        responseLengthLayout.addWidget(shortResponseButton)
+        self.responseLengthButtonGroup.addButton(shortResponseButton, 1)
+        
+        mediumResponseButton = QRadioButton("Medium")
+        responseLengthLayout.addWidget(mediumResponseButton)
+        self.responseLengthButtonGroup.addButton(mediumResponseButton, 2)
+
+        longResponseButton = QRadioButton("Long")
+        responseLengthLayout.addWidget(longResponseButton)
+        self.responseLengthButtonGroup.addButton(longResponseButton, 3)
+
+        layout.addLayout(responseLengthLayout)
+
         #Save and cancel buttons at the bottom
         saveCancelLayout = QHBoxLayout()
 
@@ -61,7 +82,14 @@ class SettingsScreen(QWidget):
     #Updates the chat's settings to those chosen on the settings screen
     def saveSettings(self):
         newLanguage = self.languageBox.currentText()
+        newResponseLength = "short"
 
+        checkedResponseButton = self.responseLengthButtonGroup.checkedButton()
+
+        if checkedResponseButton != None:
+            newResponseLength = checkedResponseButton.text()
+
+        #The ChatPanel stores the settings for the current chat.
         #Get the ChatPanel and update the settings for the chat as it is happening.
         app = self.parent()
 
@@ -69,13 +97,14 @@ class SettingsScreen(QWidget):
             app = app.parent()
         chat = app.mainScreen.chatPanel
         chat.language = newLanguage
+        chat.responseLength = newResponseLength
 
         #Update the chat's settings in the database    
         try:
             conn = sqlite3.connect("SettingsDB.db")
             cursor = conn.cursor()
-            cursor.execute("UPDATE ChatSettings SET language = ? WHERE name = ?", 
-                                   (newLanguage, self.chatName))
+            cursor.execute("UPDATE ChatSettings SET language = ?, response_length = ? WHERE name = ?", 
+                                   (newLanguage, newResponseLength, self.chatName))
             conn.commit()
             conn.close()
         except sqlite3.Error as e:

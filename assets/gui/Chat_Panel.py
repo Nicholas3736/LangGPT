@@ -21,6 +21,7 @@ class ChatPanel(QWidget):
     def __init__(self, apiKey):
         super().__init__()
         self.language = ""
+        self.responseLength = ""
         self.APIConnection = Groq(api_key = apiKey)
         print("API key: " + apiKey)
 
@@ -76,6 +77,7 @@ class ChatPanel(QWidget):
             settings = cursor.execute("SELECT * FROM ChatSettings WHERE name = ?", (chatName,))
             settings = settings.fetchone()
             self.language = settings[0][1]
+            self.responseLength = settings[0][2]
         except sqlite3.Error as e:
             print(e)
 
@@ -91,7 +93,8 @@ class ChatPanel(QWidget):
                 messages=[
                     {
                         "role": "system",
-                        "content": "You must give your answer in " + self.language
+                        "content": "You must give your answer in " + self.language + " and keep it at " 
+                        + self.responseLength + " length."
                     },
                     {
                         "role": "user",
