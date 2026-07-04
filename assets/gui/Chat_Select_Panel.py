@@ -45,15 +45,20 @@ class ChatSelectPanel(QWidget):
         upperPanel.addWidget(newChatButton)
         layout.addLayout(upperPanel)
 
-        #Create ChatIcons for all of the existing chats
-        os.chdir(os.path.dirname(__file__)[:-4] + "/chats")
-        chats = os.listdir()
         lowerPanel = QVBoxLayout()
+        
+        #Create ChatIcons for all of the existing chats
+        try:
+            os.chdir(os.path.dirname(__file__)[:-4])
+            conn = sqlite3.connect("SettingsDB.db")
+            cursor = conn.cursor()
+            chats = cursor.execute("SELECT name FROM ChatSettings").fetchall()
 
-        for chat in chats:
-            lowerPanel.addWidget(ChatIcon(chat))
-        os.chdir(os.path.dirname(__file__)[:-4])
-
+            for chat in chats:
+                lowerPanel.addWidget(ChatIcon(chat[0]))
+            conn.close()
+        except sqlite3.Error as e:
+            print(e)
         lowerPanel.addStretch()
         lowerPanel.setSpacing(0)
         lowerPanel.setContentsMargins(0, 0, 0, 0)
@@ -68,25 +73,28 @@ class ChatSelectPanel(QWidget):
 
         self.setLayout(layout)
     
+    #Creates a new chat
     def createChat(self):
+
+        #prompt for chat name
         os.chdir(os.path.dirname(__file__)[:-4] + "/chats")
         name, ok = QInputDialog.getText(self, "New Chat",
                                     "Enter the name of the chat:", QLineEdit.Normal)
         chats = os.listdir()
 
+        #Verify that the name is not already taken
         while ok and (name.strip() == "" or name in chats):
             name, ok = QInputDialog.getText(self, "New Chat",
                                     "Invalid name\n\nEnter the name of " \
                                     "the chat:", QLineEdit.Normal)
-        
+        os.chdir(os.path.dirname(__file__)[:-4])
+
+        #Create the chat
         if ok:
-            os.mkdir(name)
             layout = self.scrollArea.widget().layout()
             layout.insertWidget(layout.count() - 1, ChatIcon(name))
-            self.parent().currentChat = name
 
-            os.chdir(os.path.dirname(__file__)[:-4])
-
+            #Create the entry in the SQL database and set the chat
             try:
                 conn = sqlite3.connect("SettingsDB.db")
                 cursor = conn.cursor()
@@ -97,7 +105,7 @@ class ChatSelectPanel(QWidget):
                 conn.close()
             except sqlite3.Error as e:
                 print(e)
-        os.chdir(os.path.dirname(__file__)[:-4])
+            self.parent().setChat(name)
 
 
 #This class represents an icon for an individual chat that the user can
@@ -182,17 +190,16 @@ class ChatIcon(QWidget):
 
     def deleteChat(self):
         chatName = self.link.text()
-        os.chdir(os.path.dirname(__file__)[:-4] + "/chats")
-        shutil.rmtree(os.getcwd() + "/" + chatName)
         self.parent().layout().removeWidget(self)
         self.deleteLater()
 
-        os.chdir(os.path.dirname(__file__)[:-4])
-
         try:
+            os.chdir(os.path.dirname(__file__)[:-4])
+            print(os.getcwd())
             conn = sqlite3.connect("SettingsDB.db")
             cursor = conn.cursor()
             
+            cursor.execute("DELETE from Messages where chat_name = ?", (chatName,))
             cursor.execute("DELETE from ChatSettings where name = ?", (chatName,))
             conn.commit()
             conn.close()
