@@ -1,7 +1,7 @@
 #This code brings together all of the code from the other files, 
 #creates the needed directories, and runs the app.
 
-#Written by Nicholas baker
+#Written by Nicholas Baker
 import os
 import sqlite3
 import sys
@@ -68,6 +68,7 @@ class App(QMainWindow):
 #Set up and run the app.
 os.chdir(os.path.dirname(__file__) + "/assets")
 folders = os.listdir()
+
 if "chats" not in folders: os.mkdir("chats")
 if "prompts" not in folders: os.mkdir("prompts")
 os.chdir(os.path.dirname(__file__))

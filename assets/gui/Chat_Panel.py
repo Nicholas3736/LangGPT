@@ -31,10 +31,6 @@ class ChatPanel(QWidget):
         self.setPalette(palette)
 
         self.header = chatHeaderArea("")
-        self.setAutoFillBackground(True)
-        palette = self.palette()
-        palette.setColor(QPalette.ColorRole.Window, QColor(245, 245, 245))
-        self.setPalette(palette)
 
         self.displayArea = ChatDisplayArea()
         self.scrollArea = QScrollArea()
@@ -78,6 +74,8 @@ class ChatPanel(QWidget):
             settings = settings.fetchone()
             self.language = settings[0][1]
             self.responseLength = settings[0][2]
+            conn.commit()
+            conn.close()
         except sqlite3.Error as e:
             print(e)
 
@@ -108,21 +106,24 @@ class ChatPanel(QWidget):
             print("Error connecting with the API. Displaying dummy message for the bot instead.")
             response = "Bot: API connection failed. This is a dummy response."
         self.displayArea.displayMessage(response)
-
-        #record the messages in the message log
-        os.chdir(os.path.dirname(__file__)[:-4] + "/chats/" + self.parent().currentChat)
         
         try:
-            outFile = open(str(self.displayArea.msgNum + 1) + ".txt", encoding = "utf-16", mode = "w")
-            outFile.write(userMessage)
-            outFile.close()
+            os.chdir(os.path.dirname(__file__)[:-4])
+            conn = sqlite3.connect("SettingsDB.db")
+            cursor = conn.cursor()
 
-            outFile = open(str(self.displayArea.msgNum + 2) + ".txt", encoding = "utf-16", mode = "w")
-            outFile.write(response)
-            outFile.close()
-        except Exception as e:
+            cursor.execute("INSERT INTO Messages "
+            "(chat_name, msg_num, sent_by_ai, content)" \
+            "VALUES (?, ?, ?, ?)", (self.header.title.text(), 
+                                    self.displayArea.msgNum + 1, 0, userMessage))
+            cursor.execute("INSERT INTO Messages "
+            "(chat_name, msg_num, sent_by_ai, content)" \
+            "VALUES (?, ?, ?, ?)", (self.header.title.text(), 
+                                    self.displayArea.msgNum + 2, 1, response))
+            conn.commit()
+            conn.close()
+        except sqlite3.error as e:
             print(e)
-        os.chdir(os.path.dirname(__file__))
 
         self.displayArea.msgNum += 2
 
@@ -150,27 +151,28 @@ class ChatDisplayArea(QWidget):
 
         #Load the chat into the display
         if chatName != "":
-            os.chdir(os.path.dirname(__file__)[:-4] + "/chats/" + chatName)
-            messages = os.listdir()
+            try:
+                conn = sqlite3.connect("SettingsDB.db")
+                cursor = conn.cursor()
+            
+                messages = cursor.execute("SELECT content, msg_num FROM Messages " \
+                "WHERE chat_name = ? ORDER BY msg_num", (chatName,)).fetchall()
 
-            if len(messages):
-                print(messages)
-                messages = sorted(messages, key = lambda x: int(x[:-4:]))
-                self.msgNum = int(messages[-1][:-4:])
-            else:
-                self.msgNum = 0
-
-            for msg in messages:
-                try:
-                    print("Reading " + msg + " in " + chatName)
-                    outFile = open(msg, encoding = "utf-16", mode = "r")
-                    content = outFile.read()
+                if len(messages):
+                    self.msgNum = messages[len(messages) - 1][1] + 1
+                else:
+                    self.msgNum = 0
                     
-                    self.displayMessage(content)
-                    outFile.close()
-                except Exception as e:
-                    print(e)
-            os.chdir(os.path.dirname(__file__))
+                print("Set message number to " + str(self.msgNum))
+
+                for m in messages:
+                    self.displayMessage(m[0])
+                conn.commit()
+                conn.close()
+            except sqlite3.Error as e:
+                print(e)
+
+            os.chdir(os.path.dirname(__file__)[-4])
         else:
             self.msgNum = 0
     
