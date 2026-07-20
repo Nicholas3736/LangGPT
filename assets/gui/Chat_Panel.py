@@ -205,10 +205,12 @@ class ChatInputArea(QWidget):
         layout = QHBoxLayout()
         
         self.inputArea = QLineEdit()
+        self.inputArea.setStyleSheet("background-color: #000000;")
         layout.addWidget(self.inputArea)
 
         button = QPushButton("Send")
         button.clicked.connect(self.sendMessage)
+        button.setStyleSheet("background-color: #000000;")
         layout.addWidget(button)
         
         self.setLayout(layout)
