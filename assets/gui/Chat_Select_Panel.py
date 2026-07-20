@@ -75,26 +75,37 @@ class ChatSelectPanel(QWidget):
     
     #Creates a new chat
     def createChat(self):
+        os.chdir(os.path.dirname(__file__)[:-4])
 
         #prompt for chat name
-        os.chdir(os.path.dirname(__file__)[:-4] + "/chats")
         name, ok = QInputDialog.getText(self, "New Chat",
                                     "Enter the name of the chat:", QLineEdit.Normal)
-        chats = os.listdir()
+        chats = []
+        
+        #Get names of all the chats
+        try:
+            conn = sqlite3.connect("SettingsDB.db")
+            cursor = conn.cursor()
+            chats = cursor.execute("SELECT name FROM ChatSettings").fetchall()
+            conn.close()
+
+            for i in range(0, len(chats)):
+                chats[i] = chats[i][0]
+        except sqlite3.Error as e:
+            print(e)
 
         #Verify that the name is not already taken
         while ok and (name.strip() == "" or name in chats):
             name, ok = QInputDialog.getText(self, "New Chat",
                                     "Invalid name\n\nEnter the name of " \
                                     "the chat:", QLineEdit.Normal)
-        os.chdir(os.path.dirname(__file__)[:-4])
 
         #Create the chat
         if ok:
             layout = self.scrollArea.widget().layout()
             layout.insertWidget(layout.count() - 1, ChatIcon(name))
 
-            #Create the entry in the SQL database and set the chat
+            #Create the entry in the SQL database and set the current chat to the new one
             try:
                 conn = sqlite3.connect("SettingsDB.db")
                 cursor = conn.cursor()
