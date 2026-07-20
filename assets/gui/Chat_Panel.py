@@ -72,8 +72,9 @@ class ChatPanel(QWidget):
 
             settings = cursor.execute("SELECT * FROM ChatSettings WHERE name = ?", (chatName,))
             settings = settings.fetchone()
-            self.language = settings[0][1]
-            self.responseLength = settings[0][2]
+            print(settings)
+            self.language = settings[1]
+            self.responseLength = settings[2]
             conn.commit()
             conn.close()
         except sqlite3.Error as e:
@@ -159,7 +160,7 @@ class ChatDisplayArea(QWidget):
                 "WHERE chat_name = ? ORDER BY msg_num", (chatName,)).fetchall()
 
                 if len(messages):
-                    self.msgNum = messages[len(messages) - 1][1] + 1
+                    self.msgNum = len(messages)
                 else:
                     self.msgNum = 0
                     
