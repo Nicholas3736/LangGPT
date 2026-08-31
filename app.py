@@ -66,11 +66,6 @@ class App(QMainWindow):
         self.stackLayout.setCurrentIndex(0)
 
 #Set up and run the app.
-os.chdir(os.path.dirname(__file__) + "/assets")
-folders = os.listdir()
-
-if "chats" not in folders: os.mkdir("chats")
-if "prompts" not in folders: os.mkdir("prompts")
 os.chdir(os.path.dirname(__file__))
 
 app = QApplication([])
