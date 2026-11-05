@@ -14,8 +14,10 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QSizePolicy
 )
-import shutil
-import sqlite3
+import sys
+
+sys.path.append(os.path.dirname(__file__)[-4])
+import assets.utilities as util
 
 
 #Temporary function to color whatever widget is passed in a random color.
@@ -48,17 +50,11 @@ class ChatSelectPanel(QWidget):
         lowerPanel = QVBoxLayout()
         
         #Create ChatIcons for all of the existing chats
-        try:
-            os.chdir(os.path.dirname(__file__)[:-4])
-            conn = sqlite3.connect("SettingsDB.db")
-            cursor = conn.cursor()
-            chats = cursor.execute("SELECT name FROM ChatSettings").fetchall()
-
-            for chat in chats:
-                lowerPanel.addWidget(ChatIcon(chat[0]))
-            conn.close()
-        except sqlite3.Error as e:
-            print(e)
+        chats = util.executeQueries([["SELECT name FROM ChatSettings", ()]])[0]
+    
+        for chat in chats:
+            lowerPanel.addWidget(ChatIcon(chat[0]))
+            
         lowerPanel.addStretch()
         lowerPanel.setSpacing(0)
         lowerPanel.setContentsMargins(0, 0, 0, 0)
@@ -75,7 +71,6 @@ class ChatSelectPanel(QWidget):
     
     #Creates a new chat
     def createChat(self):
-        os.chdir(os.path.dirname(__file__)[:-4])
 
         #prompt for chat name
         name, ok = QInputDialog.getText(self, "New Chat",
@@ -83,16 +78,10 @@ class ChatSelectPanel(QWidget):
         chats = []
         
         #Get names of all the chats
-        try:
-            conn = sqlite3.connect("SettingsDB.db")
-            cursor = conn.cursor()
-            chats = cursor.execute("SELECT name FROM ChatSettings").fetchall()
-            conn.close()
-
-            for i in range(0, len(chats)):
-                chats[i] = chats[i][0]
-        except sqlite3.Error as e:
-            print(e)
+        chats = util.executeQueries([["SELECT name FROM ChatSettings", ()]])[0]
+        
+        for i in range(0, len(chats)):
+            chats[i] = chats[i][0]
 
         #Verify that the name is not already taken
         while ok and (name.strip() == "" or name in chats):
@@ -106,18 +95,9 @@ class ChatSelectPanel(QWidget):
             layout.insertWidget(layout.count() - 1, ChatIcon(name))
 
             #Create the entry in the SQL database and set the current chat to the new one
-            try:
-                conn = sqlite3.connect("SettingsDB.db")
-                cursor = conn.cursor()
-                
-                cursor.execute("INSERT into ChatSettings \
-                               (name, language, response_length) VALUES (?, ?, ?)", (name, "English", "medium"))
-                conn.commit()
-                conn.close()
-            except sqlite3.Error as e:
-                print(e)
+            util.executeQueries([["INSERT into ChatSettings \
+                               (name, language, response_length) VALUES (?, ?, ?)", (name, "English", "medium")]])
             self.parent().setChat(name)
-
 
 #This class represents an icon for an individual chat that the user can
 #select on the left hand side.
@@ -172,10 +152,12 @@ class ChatIcon(QWidget):
         self.parent().parent().parent().parent().parent().parent().parent().displaySettings(self.link.text())
 
     def renameChat(self):
-        os.chdir(os.path.dirname(__file__)[:-4] + "/chats")
         newName, ok = QInputDialog.getText(self, "New Chat",
                                     "Enter the new name of the chat:", QLineEdit.Normal)
-        chats = os.listdir()
+        chats = util.executeQueries([["SELECT name FROM ChatSettings", ()]])[0]
+
+        for i in range(0, len(chats)):
+            chats[i] = chats[i][0]
 
         while ok and (newName.strip() == "" or newName in chats):
             newName, ok = QInputDialog.getText(self, "New Chat",
@@ -184,40 +166,16 @@ class ChatIcon(QWidget):
         
         if ok:
             oldName = self.link.text()
-            os.rename(os.getcwd() + "/" + oldName, os.getcwd() + "/" + newName)
+            util.executeQueries([["UPDATE ChatSettings SET name = ? WHERE name = ?", (newName, oldName)]])
             self.link.setText(newName)
-
-            os.chdir(os.path.dirname(__file__)[:-4])
-
-            try:
-                conn = sqlite3.connect("SettingsDB.db")
-                cursor = conn.cursor()
-                
-                cursor.execute("UPDATE ChatSettings SET name = ? where name = ?", (newName, oldName))
-                conn.commit()
-                conn.close()
-            except sqlite3.Error as e:
-                print(e)
 
     def deleteChat(self):
         chatName = self.link.text()
         self.parent().layout().removeWidget(self)
         self.deleteLater()
 
-        try:
-            os.chdir(os.path.dirname(__file__)[:-4])
-            print(os.getcwd())
-            conn = sqlite3.connect("SettingsDB.db")
-            cursor = conn.cursor()
-            
-            cursor.execute("DELETE from Messages where chat_name = ?", (chatName,))
-            cursor.execute("DELETE from ChatSettings where name = ?", (chatName,))
-            conn.commit()
-            conn.close()
-        except sqlite3.Error as e:
-            print(e)
-
-
+        util.executeQueries([["DELETE from Messages where chat_name = ?", (chatName,)], 
+                             ["DELETE from ChatSettings where name = ?", (chatName,)]])
 
 #This represents the text on each chatIcon.
 #This is needed to make the text clickable.
@@ -234,4 +192,4 @@ class ClickableText(QLabel):
     def mouseReleaseEvent(self, ev):
         if self.mousePressed:
             self.mousePressed = False
-            self.clicked.emit("clicked")
+            self.clicked.emit("clicked")     

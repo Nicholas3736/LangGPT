@@ -2,7 +2,6 @@
 #(The chat and the chat selection menu on the left).
 
 #Written by Nicholas baker
-import os
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QWidget, QHBoxLayout
 from Chat_Panel import ChatPanel
@@ -25,7 +24,6 @@ def colorRandom(w):
 class MainScreen(QWidget):
     def __init__(self):
         super().__init__()
-        print("DIRECTORY: " + os.path.dirname(__file__))
         self.currentChat = ""
 
         #Prompt for the API key to be used

@@ -13,7 +13,9 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QTextEdit
 )
-import sqlite3
+import sys
+sys.path.append(os.path.dirname(__file__)[:-4])
+import assets.utilities as util
 
 
 #The panel where the chatting takes place. This is also where the API is run.
@@ -65,20 +67,10 @@ class ChatPanel(QWidget):
         self.layout().insertWidget(1, self.scrollArea)
         self.displayArea = newDisplay
 
-        try:
-            os.chdir(os.path.dirname(__file__)[:-4])
-            conn = sqlite3.connect("SettingsDB.db")
-            cursor = conn.cursor()
-
-            settings = cursor.execute("SELECT * FROM ChatSettings WHERE name = ?", (chatName,))
-            settings = settings.fetchone()
-            print(settings)
-            self.language = settings[1]
-            self.responseLength = settings[2]
-            conn.commit()
-            conn.close()
-        except sqlite3.Error as e:
-            print(e)
+        settings = util.executeQueries([["SELECT * FROM ChatSettings WHERE name = ?", (chatName,)]])[0][0]
+        print(settings)
+        self.language = settings[1]
+        self.responseLength = settings[2]
 
     #Receives a message from the input panel, sends it to the
     #Groq API, and displays both the user message and response.
@@ -87,6 +79,7 @@ class ChatPanel(QWidget):
         print(self.displayArea.msgNum)
         userMessage = "User: " + msg
         self.displayArea.displayMessage(userMessage)
+        
         try:
             chat_completion = self.APIConnection.chat.completions.create(
                 messages=[
@@ -107,25 +100,17 @@ class ChatPanel(QWidget):
             print("Error connecting with the API. Displaying dummy message for the bot instead.")
             response = "Bot: API connection failed. This is a dummy response."
         self.displayArea.displayMessage(response)
-        
-        try:
-            os.chdir(os.path.dirname(__file__)[:-4])
-            conn = sqlite3.connect("SettingsDB.db")
-            cursor = conn.cursor()
 
-            cursor.execute("INSERT INTO Messages "
-            "(chat_name, msg_num, sent_by_ai, content)" \
-            "VALUES (?, ?, ?, ?)", (self.header.title.text(), 
-                                    self.displayArea.msgNum + 1, 0, userMessage))
-            cursor.execute("INSERT INTO Messages "
-            "(chat_name, msg_num, sent_by_ai, content)" \
-            "VALUES (?, ?, ?, ?)", (self.header.title.text(), 
-                                    self.displayArea.msgNum + 2, 1, response))
-            conn.commit()
-            conn.close()
-        except sqlite3.error as e:
-            print(e)
+        queries = [["INSERT INTO Messages " \
+                    "(chat_name, msg_num, sent_by_ai, content)" \
+                    "VALUES (?, ?, ?, ?)", (self.header.title.text(), 
+                                            self.displayArea.msgNum + 1, 0, userMessage)],
+                   ["INSERT INTO Messages " \
+                    "(chat_name, msg_num, sent_by_ai, content)" \
+                    "VALUES (?, ?, ?, ?)", (self.header.title.text(), 
+                                            self.displayArea.msgNum + 2, 1, response)]]
 
+        util.executeQueries(queries)
         self.displayArea.msgNum += 2
 
 class chatHeaderArea(QWidget):
@@ -152,30 +137,18 @@ class ChatDisplayArea(QWidget):
 
         #Load the chat into the display
         if chatName != "":
-            try:
-                conn = sqlite3.connect("SettingsDB.db")
-                cursor = conn.cursor()
+            messages = util.executeQueries([["SELECT content, msg_num FROM Messages " \
+                                "WHERE chat_name = ? ORDER BY msg_num", (chatName,)]])[0]
             
-                messages = cursor.execute("SELECT content, msg_num FROM Messages " \
-                "WHERE chat_name = ? ORDER BY msg_num", (chatName,)).fetchall()
-
-                if len(messages):
-                    self.msgNum = len(messages)
-                else:
-                    self.msgNum = 0
-                    
-                print("Set message number to " + str(self.msgNum))
-
+            if len(messages):
+                self.msgNum = len(messages)
                 for m in messages:
-                    self.displayMessage(m[0])
-                conn.commit()
-                conn.close()
-            except sqlite3.Error as e:
-                print(e)
-
-            os.chdir(os.path.dirname(__file__)[-4])
+                                self.displayMessage(m[0])
+            else:
+                self.msgNum = 0  
         else:
             self.msgNum = 0
+        print("Set message number to " + str(self.msgNum))
     
     #Displays the massage passed in on the chat screen.
     def displayMessage(self, msg):

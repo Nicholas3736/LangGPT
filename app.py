@@ -3,14 +3,15 @@
 
 #Written by Nicholas Baker
 import os
-import sqlite3
 import sys
+sys.path.append(os.path.dirname(__file__) + "/assets")
 sys.path.append(os.path.dirname(__file__) + "/assets/gui")
 
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedLayout, QWidget
 from assets.gui.Main_Screen import MainScreen
-from assets.gui.settings_screen import SettingsScreen
+from assets.gui.settings_screens import SettingsScreen
+import assets.utilities as util
 
 
 class App(QMainWindow):
@@ -35,21 +36,12 @@ class App(QMainWindow):
         #retrieve the settings for the chat to display them on the settings screen
         languageSetting = ""
         responseLengthSetting = ""
+
+        settings = util.executeQueries([["SELECT * FROM ChatSettings WHERE name = ?", (chatName,)]])[0]
+        languageSetting = settings[0][1]
+        responseLengthSetting = settings[0][2]
+        print(settings)
         
-        try:
-            os.chdir(os.path.dirname(__file__) + "/assets")
-            conn = sqlite3.connect(os.getcwd() + "/SettingsDB.db")
-            cursor = conn.cursor()
-
-            settings = cursor.execute("SELECT * FROM ChatSettings WHERE name = ?", (chatName,))
-            settings = settings.fetchall()
-
-            languageSetting = settings[0][1]
-            responseLengthSetting = settings[0][2]
-            print(settings)
-        except sqlite3.Error as e:
-            print(e)
-
         self.settingsScreen.chatName = chatName
         self.settingsScreen.languageBox.setCurrentText(languageSetting)
         

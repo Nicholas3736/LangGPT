@@ -1,4 +1,4 @@
-#This code implements the settings screen for the chats.
+#This file implements every screen where settings can be configured in the app.
 #Written by Nicholas Baker
 
 import os
@@ -14,7 +14,9 @@ from PySide6.QtWidgets import(
     QVBoxLayout,
     QWidget,
 )
-import sqlite3
+import sys
+sys.path.append(os.path.dirname(__file__)[:-4])
+import assets.utilities as util
 
 class SettingsScreen(QWidget):
     def __init__(self):
@@ -24,30 +26,14 @@ class SettingsScreen(QWidget):
         layout.addWidget(QLabel("Language"))
 
         #Retrieve the supported languages from the database and place them in the combo box
-        os.chdir(os.path.dirname(__file__)[:-4])
-        supportedLanguages = list()
-        prompts = list()
+        langsAndPrompts = util.executeQueries([["SELECT language from Languages", ()], 
+                                               ["SELECT name FROM Prompts", ()]])
 
-        try:
-            conn = sqlite3.connect("SettingsDB.db")
-            cursor = conn.cursor()
-            langQuery = cursor.execute("SELECT language from Languages")
-            
-            currLang = ""
-            currLang = langQuery.fetchone()
-            
-            while currLang != None:
-                supportedLanguages.append(currLang[0])
-                currLang = langQuery.fetchone()
-
-            promptQuery = cursor.execute("SELECT name FROM Prompts")
-            prompts = promptQuery.fetchall()
-            conn.close()
-        except sqlite3.Error as e:
-            print(e)
+        supportedLanguages = langsAndPrompts[0] 
+        prompts = langsAndPrompts[1]
 
         self.languageBox = QComboBox()
-        self.languageBox.addItems(supportedLanguages)
+        self.languageBox.addItems(l[0] for l in supportedLanguages)
         layout.addWidget(self.languageBox)
 
         #Setting for the prompt that will be used in the chat.
@@ -103,15 +89,12 @@ class SettingsScreen(QWidget):
         self.promptCreationWindow = CreatePromptWindow()
         self.promptCreationWindow.show()
         
-
-
     #Updates the chat's settings to those chosen on the settings screen
     def saveSettings(self):
         newLanguage = self.languageBox.currentText()
         newResponseLength = "short"
 
         checkedResponseButton = self.responseLengthButtonGroup.checkedButton()
-
         if checkedResponseButton != None:
             newResponseLength = checkedResponseButton.text()
 
@@ -126,15 +109,8 @@ class SettingsScreen(QWidget):
         chat.responseLength = newResponseLength
 
         #Update the chat's settings in the database    
-        try:
-            conn = sqlite3.connect("SettingsDB.db")
-            cursor = conn.cursor()
-            cursor.execute("UPDATE ChatSettings SET language = ?, response_length = ? WHERE name = ?", 
-                                   (newLanguage, newResponseLength, self.chatName))
-            conn.commit()
-            conn.close()
-        except sqlite3.Error as e:
-            print(e)
+        util.executeQueries([["UPDATE ChatSettings SET language = ?, response_length = ? WHERE name = ?", 
+                              (newLanguage, newResponseLength, self.chatName)]])
         app.displayMainScreen()
 
     def cancel(self):
@@ -144,7 +120,8 @@ class SettingsScreen(QWidget):
             app = app.parent()
         app.displayMainScreen()
 
-#Window that contains the GUI to create a new chat prompt
+#Window that contains the GUI to create a new chat prompt. 
+#Used by SettingsScreen and CreateChatScreen
 class CreatePromptWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -170,16 +147,8 @@ class CreatePromptWindow(QWidget):
     def createPrompt(self):
         os.chdir(os.path.dirname(__file__)[:-4])
 
-        try:
-            conn = sqlite3.connect("SettingsDB.db")
-            cursor = conn.cursor()
-
-            cursor.execute("INSERT INTO Prompts (name, prompt) VALUES (?, ?)", 
-                         (self.nameBox.text(), self.promptBox.toPlainText()))
-            conn.commit()
-            conn.close()    
-        except sqlite3.Error as e:
-            print(e)
+        util.executeQueries([["INSERT INTO Prompts (name, prompt) VALUES (?, ?)", 
+                              (self.nameBox.text(), self.promptBox.toPlainText())]])
         self.close()
 
     def cancel(self):
