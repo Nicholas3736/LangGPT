@@ -35,8 +35,9 @@ def executeQueries(queries):
 
 #Accepts a QWidget and returns the first ancestor
 #of the widget that is an instance of parentClass  
-def getParent(widget, parentClass):
-    parent = widget.parent()
-    while parent.__class__.__name__ != parentClass:
-        parent = parent.parent()
-    return parent
+def getAncestor(widget, targetAncestor):
+    currAncestor = widget.parent()
+    while currAncestor.__class__.__name__ != targetAncestor:
+        print(currAncestor.__class__.__name__)
+        currAncestor = currAncestor.parent()
+    return currAncestor

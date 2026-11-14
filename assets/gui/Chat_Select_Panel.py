@@ -43,7 +43,7 @@ class ChatSelectPanel(QWidget):
         #Top panel (where the "new chat" button is)
         upperPanel = QHBoxLayout()
         newChatButton = QPushButton("New Chat")
-        newChatButton.clicked.connect(self.createChat)
+        newChatButton.clicked.connect(self.displayCreationScreen)
         upperPanel.addWidget(newChatButton)
         layout.addLayout(upperPanel)
 
@@ -69,35 +69,12 @@ class ChatSelectPanel(QWidget):
 
         self.setLayout(layout)
     
-    #Creates a new chat
-    def createChat(self):
-
-        #prompt for chat name
-        name, ok = QInputDialog.getText(self, "New Chat",
-                                    "Enter the name of the chat:", QLineEdit.Normal)
-        chats = []
-        
-        #Get names of all the chats
-        chats = util.executeQueries([["SELECT name FROM ChatSettings", ()]])[0]
-        
-        for i in range(0, len(chats)):
-            chats[i] = chats[i][0]
-
-        #Verify that the name is not already taken
-        while ok and (name.strip() == "" or name in chats):
-            name, ok = QInputDialog.getText(self, "New Chat",
-                                    "Invalid name\n\nEnter the name of " \
-                                    "the chat:", QLineEdit.Normal)
-
-        #Create the chat
-        if ok:
-            layout = self.scrollArea.widget().layout()
-            layout.insertWidget(layout.count() - 1, ChatIcon(name))
-
-            #Create the entry in the SQL database and set the current chat to the new one
-            util.executeQueries([["INSERT into ChatSettings \
-                               (name, language, response_length) VALUES (?, ?, ?)", (name, "English", "medium")]])
-            self.parent().setChat(name)
+    def displayCreationScreen(self):
+        util.getAncestor(self, "App").displayCreationScreen()
+    
+    def createChatIcon(self, chatName):
+        layout = self.scrollArea.widget().layout()
+        layout.insertWidget(layout.count() - 1, ChatIcon(chatName))
 
 #This class represents an icon for an individual chat that the user can
 #select on the left hand side.
@@ -149,7 +126,7 @@ class ChatIcon(QWidget):
         menu.exec(QCursor.pos())
 
     def displaySettings(self):
-        self.parent().parent().parent().parent().parent().parent().parent().displaySettings(self.link.text())
+        util.getAncestor(self, "App").displaySettings(self.link.text())
 
     def renameChat(self):
         newName, ok = QInputDialog.getText(self, "New Chat",

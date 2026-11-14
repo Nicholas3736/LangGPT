@@ -8,6 +8,7 @@ from PySide6.QtWidgets import(
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QRadioButton,
     QTextEdit,
@@ -71,9 +72,9 @@ class SettingsScreen(QWidget):
         #Save and cancel buttons at the bottom
         saveCancelLayout = QHBoxLayout()
 
-        saveButton = QPushButton("Save")
-        saveButton.clicked.connect(self.saveSettings)
-        saveCancelLayout.addWidget(saveButton)
+        self.saveButton = QPushButton("Save")
+        self.saveButton.clicked.connect(self.saveSettings)
+        saveCancelLayout.addWidget(self.saveButton)
 
         cancelButton = QPushButton("Cancel")
         cancelButton.clicked.connect(self.cancel)
@@ -119,6 +120,50 @@ class SettingsScreen(QWidget):
         while app.__class__.__name__ != "App":
             app = app.parent()
         app.displayMainScreen()
+
+#The screen that comes up when configuring the settings for a new chat.
+#It is nearly identical to SettingsScreen.
+class NewChatScreen(SettingsScreen):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("New Chat")
+        self.layout().insertWidget(0, QLabel("Chat Name"))
+        self.chatNameInput = QLineEdit()
+        self.layout().insertWidget(1, self.chatNameInput)
+
+        self.saveButton.setText("Create Chat")
+        self.saveButton.clicked.connect(self.createChat)
+
+    #Executes when the "Create Chat" button is clicked.
+    def createChat(self):
+
+        #prompt for chat name and get the names of all other chats
+        name = self.chatNameInput.text()
+        chats = util.executeQueries([["SELECT name FROM ChatSettings", ()]])[0]
+        for i in range(0, len(chats)):
+            chats[i] = chats[i][0]
+
+        #Verify that the name is not already taken
+        dlg = QMessageBox()
+        
+        if name.strip() == "":
+            dlg.setText("Please enter a name.")
+        elif name in chats:
+            dlg.setText("This name is already taken. Please enter a different one.")
+        else:
+            dlg.setText("Chat created succesfully.")
+            util.executeQueries([["INSERT into ChatSettings \
+                                  (name, language, response_length) VALUES (?, ?, ?)", 
+                                  (name, self.languageBox.currentText(), 
+                                   self.responseLengthButtonGroup.checkedButton().text())]])
+            
+            app = util.getAncestor(self, "App")
+            app.mainScreen.chatSelectPanel.createChatIcon(name)
+            app.mainScreen.setChat(name)
+            app.displayMainScreen()
+            
+        dlg.exec()
+
 
 #Window that contains the GUI to create a new chat prompt. 
 #Used by SettingsScreen and CreateChatScreen

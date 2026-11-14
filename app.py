@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(__file__) + "/assets/gui")
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedLayout, QWidget
 from assets.gui.Main_Screen import MainScreen
-from assets.gui.settings_screens import SettingsScreen
+from assets.gui.settings_screens import SettingsScreen, NewChatScreen
 import assets.utilities as util
 
 
@@ -24,8 +24,10 @@ class App(QMainWindow):
         self.stackLayout = QStackedLayout()
         self.mainScreen = MainScreen()
         self.settingsScreen = SettingsScreen()
+        self.newChatScreen = NewChatScreen()
         self.stackLayout.addWidget(self.mainScreen)
         self.stackLayout.addWidget(self.settingsScreen)
+        self.stackLayout.addWidget(self.newChatScreen)
         
         w = QWidget()
         w.setLayout(self.stackLayout)
@@ -56,6 +58,9 @@ class App(QMainWindow):
 
     def displayMainScreen(self):
         self.stackLayout.setCurrentIndex(0)
+
+    def displayCreationScreen(self):
+        self.stackLayout.setCurrentIndex(2)
 
 #Set up and run the app.
 os.chdir(os.path.dirname(__file__))

@@ -31,10 +31,10 @@ class MainScreen(QWidget):
         keyInput.exec()
 
         self.chatPanel = ChatPanel(keyInput.getInput())
-        chatSelectPanel = ChatSelectPanel()
+        self.chatSelectPanel = ChatSelectPanel()
 
         layout = QHBoxLayout()
-        layout.addWidget(chatSelectPanel, stretch = 4)
+        layout.addWidget(self.chatSelectPanel, stretch = 4)
         layout.addWidget(self.chatPanel, stretch = 10)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -42,4 +42,4 @@ class MainScreen(QWidget):
 
     def setChat(self, chatName):
         self.currentChat = chatName
-        self.chatPanel.loadChat(self.currentChat)
+        self.chatPanel.loadChat(chatName)
